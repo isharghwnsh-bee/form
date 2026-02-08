@@ -1,0 +1,155 @@
+<!-- ================= HTML FILE (index.html) ================= -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Course Registration Form</title>
+
+  <!-- jsPDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 360px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+
+    h2 { text-align: center; }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled { background: #999; }
+
+    #status { margin-top: 10px; text-align: center; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>Course Registration</h2>
+
+    <form id="studentForm">
+      <input name="fullName" placeholder="Full Name" required />
+      <input name="studentId" placeholder="Student ID" required />
+      <input name="email" type="email" placeholder="Email" required />
+
+      <select name="course" required>
+        <option value="">Select Course</option>
+        <option>Web Development</option>
+        <option>Data Science</option>
+        <option>Cyber Security</option>
+      </select>
+
+      <textarea name="notes" placeholder="Additional Notes"></textarea>
+
+      <button id="btn" type="submit">Submit</button>
+    </form>
+
+    <div id="status"></div>
+  </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const { jsPDF } = window.jspdf;
+
+    // 🔁 REPLACE with your deployed Google Apps Script Web App URL
+    const URL = "https://script.google.com/macros/s/AKfycbyhN0OLRdH6LKaj0HE-bZhRdVMHcXJ5H3P0ofm5pUbUg2Js7Z2yKkxSTkd3hZNrJ5w/exec";
+
+    const form = document.getElementById("studentForm");
+    const status = document.getElementById("status");
+    const btn = document.getElementById("btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      btn.disabled = true;
+      status.textContent = "Submitting...";
+
+      const formData = new FormData(form);
+
+      const fullName = formData.get("fullName");
+      const studentId = formData.get("studentId");
+      const email = formData.get("email");
+      const course = formData.get("course");
+      const notes = formData.get("notes");
+
+      try {
+        const res = await fetch(URL, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (data.status === "success") {
+          status.className = "success";
+          status.textContent = "✓ Saved! Downloading PDF...";
+
+          // ===== Generate PDF =====
+          const pdf = new jsPDF();
+          pdf.setFontSize(18);
+          pdf.text("Course Registration Details", 20, 20);
+
+          pdf.setFontSize(12);
+          let y = 40;
+
+          pdf.text(`Full Name : ${fullName}`, 20, y); y += 10;
+          pdf.text(`Student ID: ${studentId}`, 20, y); y += 10;
+          pdf.text(`Email     : ${email}`, 20, y); y += 10;
+          pdf.text(`Course    : ${course}`, 20, y); y += 15;
+
+          pdf.text("Notes:", 20, y);
+          y += 10;
+
+          const splitNotes = pdf.splitTextToSize(notes || "N/A", 170);
+          pdf.text(splitNotes, 20, y);
+
+          pdf.save(`${studentId}_registration.pdf`);
+
+          form.reset();
+        } else {
+          status.className = "error";
+          status.textContent = "✗ " + data.message;
+        }
+      } catch (err) {
+        status.className = "error";
+        status.textContent = "✗ Network error.";
+        console.error(err);
+      }
+
+      btn.disabled = false;
+    });
+  </script>
+</body>
+</html>
+
+
+<!-- ================= GOOGLE APPS SCRIPT (Code.gs) ================= -->
